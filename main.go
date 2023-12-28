@@ -16,7 +16,7 @@ import (
 var (
 	endpoint, accessKey, secretKey                   string
 	remoteEndpoint, remoteAccessKey, remoteSecretKey string
-	bucket, object                                   string
+	bucket, prefix                                   string
 	insecure, bypassGovernance                       bool
 	objectsDeleted                                   int64
 )
@@ -29,7 +29,7 @@ func main() {
 	flag.StringVar(&remoteAccessKey, "remote-access-key", "", "S3 Access Key of the remote target")
 	flag.StringVar(&remoteSecretKey, "remote-secret-key", "", "S3 Secret Key of the remote target")
 	flag.StringVar(&bucket, "bucket", "", "Select a specific bucket")
-	flag.StringVar(&object, "object", "", "Select an object")
+	flag.StringVar(&prefix, "prefix", "", "Select an object/prefix")
 	flag.BoolVar(&insecure, "insecure", false, "Disable TLS verification")
 	flag.BoolVar(&bypassGovernance, "bypass-governance", false, "Bypass governance on deletion")
 	flag.Parse()
@@ -83,7 +83,7 @@ func main() {
 
 	for obj := range s3Client.ListObjects(ctx, bucket, minio.ListObjectsOptions{
 		Recursive:    true,
-		Prefix:       object,
+		Prefix:       prefix,
 		WithVersions: true,
 		WithMetadata: true,
 	}) {

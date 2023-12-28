@@ -10,8 +10,8 @@ Usage of ./remove-delete-markers:
     	S3 endpoint URL
   -insecure
     	Disable TLS verification
-  -object string
-    	Select an object
+  -prefix string
+    	Select an object/prefix
   -remote-access-key string
     	S3 Access Key of the remote target
   -remote-endpoint string
@@ -25,5 +25,5 @@ Usage of ./remove-delete-markers:
 Example :-
 
 ```sh
-./remove-delete-markers --endpoint https://192.168.0.119:30698 --access-key <access> --secret-key <secret> --bucket bucket1 --insecure --remote-endpoint <remote-endpoint> --remote-access-key <remote-access> --remote-secret-key <remote-secret>
+./remove-delete-markers --endpoint https://192.168.0.119:30698 --access-key <access> --secret-key <secret> --bucket bucket1 --prefix /prefixb --insecure --remote-endpoint <remote-endpoint> --remote-access-key <remote-access> --remote-secret-key <remote-secret>
 ```
