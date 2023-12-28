@@ -83,7 +83,7 @@ func main() {
 
 	for obj := range s3Client.ListObjects(ctx, bucket, minio.ListObjectsOptions{
 		Recursive:    true,
-		Prefix:       prefix,
+		Prefix:       strings.TrimPrefix(prefix, "/"),
 		WithVersions: true,
 		WithMetadata: true,
 	}) {
