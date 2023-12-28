@@ -147,7 +147,9 @@ func getS3Client(endpoint string, accessKey string, secretKey string, insecure b
 	if err != nil {
 		log.Fatalln(err)
 	}
-	transport.TLSClientConfig.InsecureSkipVerify = insecure
+	if transport.TLSClientConfig != nil {
+		transport.TLSClientConfig.InsecureSkipVerify = insecure
+	}
 
 	s3Client, err := minio.New(u.Host, &minio.Options{
 		Creds:     credentials.NewStaticV4(accessKey, secretKey, ""),
