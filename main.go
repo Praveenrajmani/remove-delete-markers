@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -16,6 +18,7 @@ var (
 	remoteEndpoint, remoteAccessKey, remoteSecretKey string
 	bucket, object                                   string
 	insecure, bypassGovernance                       bool
+	objectsDeleted                                   int64
 )
 
 func main() {
@@ -61,7 +64,23 @@ func main() {
 
 	s3Client := getS3Client(endpoint, accessKey, secretKey, insecure)
 	remoteS3Client := getS3Client(remoteEndpoint, remoteAccessKey, remoteSecretKey, insecure)
+
 	ctx := context.Background()
+
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				fmt.Printf("\nDeleted %v objects...", objectsDeleted)
+			}
+		}
+	}()
+
 	for obj := range s3Client.ListObjects(ctx, bucket, minio.ListObjectsOptions{
 		Recursive:    true,
 		Prefix:       object,
@@ -69,10 +88,9 @@ func main() {
 		WithMetadata: true,
 	}) {
 		if obj.Err != nil {
-			log.Fatalln("FAILED: LIST with error:", obj.Err)
+			log.Fatalln("unable to list with error:", obj.Err)
 			return
 		}
-		var deleteOnRemote bool
 		if obj.IsDeleteMarker && obj.IsLatest {
 			// the latest version of the object is a delete marker
 			// Fetching the remote object to compare and decide...
@@ -88,16 +106,12 @@ func main() {
 						// the remote object is the latest, skipping this.
 						continue
 					}
-					// If the source object is latest and has a delete marker
-					// then delete the object from remote too.
-					deleteOnRemote = true
 				}
 				if err != nil {
 					if minio.ToErrorResponse(err).Code != "NoSuchKey" {
 						log.Fatalln("unable to stat the remote object; %v", err)
 						return
 					}
-					// Deleting the source if the object is not found in the target
 				}
 			}
 			if err := s3Client.RemoveObject(ctx, bucket, obj.Key, minio.RemoveObjectOptions{
@@ -106,7 +120,10 @@ func main() {
 			}); err != nil {
 				log.Println("unable to delete the object from source: %v; %v", obj.Key, err)
 			}
-			if deleteOnRemote {
+			objectsDeleted++
+			// If the source object is latest and has a delete marker
+			// then delete the object from remote too.
+			if remoteObject != nil {
 				if err := remoteS3Client.RemoveObject(ctx, bucket, obj.Key, minio.RemoveObjectOptions{
 					ForceDelete:      true,
 					GovernanceBypass: bypassGovernance,
@@ -116,6 +133,7 @@ func main() {
 			}
 		}
 	}
+	fmt.Printf("\nDeleted %v objects...", objectsDeleted)
 }
 
 func getS3Client(endpoint string, accessKey string, secretKey string, insecure bool) *minio.Client {
@@ -140,4 +158,18 @@ func getS3Client(endpoint string, accessKey string, secretKey string, insecure b
 		log.Fatalln(err)
 	}
 	return s3Client
+}
+
+func logProgress(ctx context.Context) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			fmt.Printf("\nDeleted %v objects...", objectsDeleted)
+		}
+	}
 }
