@@ -96,8 +96,8 @@ func main() {
 			// Fetching the remote object to compare and decide...
 			remoteObject, err := remoteS3Client.GetObject(ctx, bucket, obj.Key, minio.GetObjectOptions{})
 			if err != nil {
-				log.Fatalln("unable to get the object %s from the remote; %v", obj.Key, err)
-				return
+				log.Printf("unable to get the object %s from the remote; %v\n", obj.Key, err)
+				continue
 			}
 			if remoteObject != nil {
 				oi, err := remoteObject.Stat()
@@ -109,8 +109,8 @@ func main() {
 				}
 				if err != nil {
 					if minio.ToErrorResponse(err).Code != "NoSuchKey" {
-						log.Fatalln("unable to stat the remote object; %v", err)
-						return
+						log.Printf("unable to stat the remote object %s; %v\n", obj.Key, err)
+						continue
 					}
 				}
 			}
@@ -118,7 +118,8 @@ func main() {
 				ForceDelete:      true,
 				GovernanceBypass: bypassGovernance,
 			}); err != nil {
-				log.Println("unable to delete the object from source: %v; %v", obj.Key, err)
+				log.Printf("unable to delete the object from source: %v; %v\n", obj.Key, err)
+				continue
 			}
 			objectsDeleted++
 			// If the source object is latest and has a delete marker
@@ -128,7 +129,7 @@ func main() {
 					ForceDelete:      true,
 					GovernanceBypass: bypassGovernance,
 				}); err != nil {
-					log.Println("unable to delete the object from target: %v; %v", obj.Key, err)
+					log.Printf("unable to delete the object from target: %v; %v\n", obj.Key, err)
 				}
 			}
 		}
